@@ -101,7 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
 
-            Text(TelegramWebApp.instance.initData.toString()),
+            Text(TelegramWebApp.instance.initDataUnsafe?.user?.photoUrl ?? ''),
 
             const Text(
               'You have pushed the button this many times:',
