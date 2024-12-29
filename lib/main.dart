@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:telegram_web_app/telegram_web_app.dart';
 
 void main() async {
   try {
     if (TelegramWebApp.instance.isSupported) {
       TelegramWebApp.instance.ready();
-      Future.delayed(const Duration(seconds: 1), TelegramWebApp.instance.expand);
+      Future.delayed(
+          const Duration(seconds: 1), TelegramWebApp.instance.expand);
     }
   } catch (e) {
     print("Error happened in Flutter while loading Telegram $e");
@@ -76,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // TRY THIS: Try changing the color here to a specific color (to
         // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
         // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
@@ -100,18 +102,26 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-
-            Text(TelegramWebApp.instance.initDataUnsafe?.user?.photoUrl ?? ''),
-
-
+            SizedBox(
+              width: 100,
+              height: 100,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(100),
+                child: SvgPicture.network(
+                  TelegramWebApp.instance.initDataUnsafe?.user?.photoUrl ?? '',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 16,
+            ),
+            Text('@${TelegramWebApp.instance.initData.user.username}'),
+            Text(
+                '${TelegramWebApp.instance.initData.user.firstname} ${TelegramWebApp.instance.initData.user.lastname}'),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
