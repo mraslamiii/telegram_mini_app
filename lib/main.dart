@@ -1,485 +1,125 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, avoid_print
-
-import 'dart:convert';
-import 'dart:html' as html;
-import 'dart:js' as js;
-import 'dart:js_util';
-
-import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:js/js.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:ton_dart/ton_dart.dart';
 
-@JS()
-external String connectTonWallet();
-
-@JS()
-external disconnectTonWallet();
-
-@JS()
-external deposit(String senderAddress, String destinationAddress, String amountInTon, String comment, bool useTon);
-
-void main() async {
+void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return ShadApp.cupertino(
-      title: 'Flutter Web App',
-      debugShowCheckedModeBanner: false,
-      cupertinoThemeBuilder: (context, theme) {
-        return theme.copyWith(applyThemeToAll: true, primaryColor: Colors.blue);
-      },
-      home: const MyHomePage(),
-      builder: (context, child) {
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: child,
-          ),
-        );
-      },
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightGreen),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  const MyHomePage({super.key, required this.title});
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final formKey = GlobalKey<ShadFormState>();
+  int _counter = 0;
 
-  String telegramId = "";
-  String walletAddress = "";
-  String walletImage = "";
-  String address = "";
-  String amount = "";
-  String comment = "";
-  String token = "TON";
-  String version = "Unknown";
-
-  @override
-  void initState() {
-    super.initState();
-
-    // // Fetch Telegram ID from Telegram Web App context
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      try {
-        // Fetch Telegram ID from Telegram Web App context
-        final telegramWebApp = js.context['Telegram']['WebApp'];
-        if (telegramWebApp != null) {
-          telegramId = telegramWebApp['initDataUnsafe']['user']['id'].toString();
-        }
-      } catch (e) {
-        //
-      }
-
-      // fetch connected wallet
-      final jsonWallet = getFromLocalStorage("CONNECTED_WALLET");
-      if (jsonWallet != null && jsonWallet.isNotEmpty) {
-        final wallet = RemoteMobileNode.fromJson(json.decode(jsonWallet));
-        setState(() {
-          final walletAddressHex = wallet.account?.address ?? "";
-          final parts = walletAddressHex.split(":");
-          if (parts.length > 1) {
-            walletAddress = TonAddress.fromBytes(
-              int.tryParse(parts[0]) ?? 0,
-              hex.decode(parts[1]),
-              bounceable: false,
-              testNet: true,
-            ).toFriendlyAddress();
-          } else {
-            walletAddress = walletAddressHex;
-          }
-          walletImage = wallet.imageUrl ?? "";
-        });
-      }
+  void _incrementCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _counter++;
     });
-  }
-
-  void saveToLocalStorage(String key, String value) {
-    html.window.localStorage[key] = value;
-  }
-
-  String? getFromLocalStorage(String key) {
-    return html.window.localStorage[key];
-  }
-
-  Future<void> _onDeposit() async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:6969/deposit'),
-        headers: <String, String>{
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST",
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: '{"telegramId": "$telegramId"}',
-      );
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final depositAddress = jsonResponse["address"];
-        final comment = jsonResponse["comment"];
-        if (mounted) {
-          showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text("Deposit Information"),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'It is very easy to top up your balance here.\nSimply send any amount of TON to this address:',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 10),
-                      SelectableText(
-                        depositAddress,
-                        style: const TextStyle(fontSize: 16, color: Colors.blue, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'And include the following comment:',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 10),
-                      SelectableText(
-                        comment,
-                        style: const TextStyle(fontSize: 16, color: Colors.blue, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                );
-              });
-        }
-      } else {}
-    } catch (e) {
-      // handle error
-    }
-  }
-
-  void _onConnect() async {
-    try {
-      final jsonWallet = await promiseToFuture(connectTonWallet());
-      final wallet = RemoteMobileNode.fromJson(json.decode(jsonWallet));
-      setState(() {
-        final walletAddressHex = wallet.account?.address ?? "";
-        final parts = walletAddressHex.split(":");
-        if (parts.length > 1) {
-          walletAddress = TonAddress.fromBytes(
-            int.tryParse(parts[0]) ?? 0,
-            hex.decode(parts[1]),
-            bounceable: false,
-            testNet: true,
-          ).toFriendlyAddress();
-        } else {
-          walletAddress = walletAddressHex;
-        }
-        walletImage = wallet.imageUrl ?? "";
-      });
-      saveToLocalStorage("CONNECTED_WALLET", jsonWallet);
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  void _onDisconnect() async {
-    try {
-      await disconnectTonWallet();
-      setState(() {
-        walletAddress = "";
-      });
-      saveToLocalStorage("CONNECTED_WALLET", "");
-    } catch (e) {
-      print(e);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
     return Scaffold(
-      backgroundColor: Colors.green,
       appBar: AppBar(
-        title: Text(
-          'Flutter Web App',
-          style: ShadTheme.of(context).textTheme.h4,
-        ),
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18.0),
+      body: Center(
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
         child: Column(
-          children: [
-            const Row(),
-            const SizedBox(height: 20),
-            if (walletAddress.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      walletImage,
-                      width: 24,
-                      height: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Your TON Address:",
-                    style: ShadTheme.of(context).textTheme.small,
-                  ),
-                ],
-              ),
-              SelectableText(
-                walletAddress,
-                style: ShadTheme.of(context).textTheme.p.copyWith(fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              _buildDepositButton(),
-              const SizedBox(height: 20),
-              ShadButton.outline(
-                onPressed: _onDisconnect,
-                width: 200,
-                icon: const Icon(Icons.link_off_sharp),
-                text: const Text('Disconnect Wallet'),
-              ),
-            ] else
-              ShadButton(
-                width: 200,
-                onPressed: _onConnect,
-                icon: const Icon(Icons.wallet),
-                text: const Text('Connect Wallet'),
-              ),
-            const SizedBox(height: 20),
+          // Column is also a layout widget. It takes a list of children and
+          // arranges them vertically. By default, it sizes itself to fit its
+          // children horizontally, and tries to be as tall as its parent.
+          //
+          // Column has various properties to control how it sizes itself and
+          // how it positions its children. Here we use mainAxisAlignment to
+          // center the children vertically; the main axis here is the vertical
+          // axis because Columns are vertical (the cross axis would be
+          // horizontal).
+          //
+          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+          // action in the IDE, or press "p" in the console), to see the
+          // wireframe for each widget.
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text(
+              'You have pushed the button this many times:',
+            ),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  ShadButton _buildDepositButton() {
-    return ShadButton(
-      onPressed: () {
-        if (walletAddress.isEmpty) {
-          ShadToaster.of(context).show(
-            ShadToast(
-              title: const Text('Wallet Connection'),
-              description: const Text('You have to connect to TON Wallet before making a deposit'),
-              action: ShadButton.outline(
-                text: const Text('Okay'),
-                onPressed: () => ShadToaster.of(context).hide(),
-              ),
-            ),
-          );
-          return;
-        }
-        showShadDialog(
-          context: context,
-          builder: (context) => ShadDialog(
-            title: const Text('Deposit'),
-            content: ShadForm(
-              key: formKey,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 350),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ShadSelectFormField<String>(
-                      id: 'token',
-                      initialValue: token,
-                      options: ["TON", "CANNA"].map((token) => ShadOption(value: token, child: Text(token))).toList(),
-                      selectedOptionBuilder: (context, value) =>
-                      value == 'none' ? const Text('Select Token') : Text(value),
-                      placeholder: const Text('Select Token'),
-                      validator: (v) {
-                        if (v == null) {
-                          return 'Please select token';
-                        }
-                        return null;
-                      },
-                      onSaved: (v) {
-                        token = v ?? "";
-                      },
-                    ),
-                    ShadInputFormField(
-                      id: 'address',
-                      placeholder: const Text('Address'),
-                      validator: (v) {
-                        if (v.isEmpty) {
-                          return 'Deposit address is required';
-                        }
-                        return null;
-                      },
-                      onSaved: (v) => address = v ?? "",
-                    ),
-                    ShadInputFormField(
-                      id: 'comment',
-                      placeholder: const Text('Comment'),
-                      validator: (v) {
-                        if (v.isEmpty) {
-                          return 'Deposit comment is required';
-                        }
-                        return null;
-                      },
-                      onSaved: (v) => comment = v ?? "",
-                    ),
-                    ShadInputFormField(
-                      id: 'amount',
-                      placeholder: const Text('Amount'),
-                      validator: (v) {
-                        if (v.isEmpty) {
-                          return 'Deposit amount is required';
-                        }
-                        return null;
-                      },
-                      onSaved: (v) => amount = v ?? "",
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              ShadButton(
-                text: const Text('Deposit'),
-                onPressed: () {
-                  if (formKey.currentState!.saveAndValidate()) {
-                    Navigator.of(context).pop();
-                    _onDeposit();
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
-      width: 200,
-      icon: const Icon(Icons.upgrade_outlined),
-      text: const Text('Deposit'),
-    );
-  }
-}
-
-class RemoteMobileNode {
-  RemoteMobileNode({
-    required this.device,
-    required this.provider,
-    required this.account,
-    required this.name,
-    required this.appName,
-    required this.imageUrl,
-    required this.aboutUrl,
-    required this.platforms,
-    required this.bridgeUrl,
-    required this.universalLink,
-    required this.openMethod,
-  });
-
-  final Device? device;
-  final String? provider;
-  final Account? account;
-  final String? name;
-  final String? appName;
-  final String? imageUrl;
-  final String? aboutUrl;
-  final List<String> platforms;
-  final String? bridgeUrl;
-  final String? universalLink;
-  final String? openMethod;
-
-  factory RemoteMobileNode.fromJson(Map<String, dynamic> json) {
-    return RemoteMobileNode(
-      device: json["device"] == null ? null : Device.fromJson(json["device"]),
-      provider: json["provider"],
-      account: json["account"] == null ? null : Account.fromJson(json["account"]),
-      name: json["name"],
-      appName: json["appName"],
-      imageUrl: json["imageUrl"],
-      aboutUrl: json["aboutUrl"],
-      platforms: json["platforms"] == null ? [] : List<String>.from(json["platforms"]!.map((x) => x)),
-      bridgeUrl: json["bridgeUrl"],
-      universalLink: json["universalLink"],
-      openMethod: json["openMethod"],
-    );
-  }
-}
-
-class Account {
-  Account({
-    required this.address,
-    required this.chain,
-    required this.walletStateInit,
-    required this.publicKey,
-  });
-
-  final String? address;
-  final String? chain;
-  final String? walletStateInit;
-  final String? publicKey;
-
-  factory Account.fromJson(Map<String, dynamic> json) {
-    return Account(
-      address: json["address"],
-      chain: json["chain"],
-      walletStateInit: json["walletStateInit"],
-      publicKey: json["publicKey"],
-    );
-  }
-}
-
-class Device {
-  Device({
-    required this.platform,
-    required this.appName,
-    required this.appVersion,
-    required this.maxProtocolVersion,
-    required this.features,
-  });
-
-  final String? platform;
-  final String? appName;
-  final String? appVersion;
-  final int? maxProtocolVersion;
-  final List<dynamic> features;
-
-  factory Device.fromJson(Map<String, dynamic> json) {
-    return Device(
-      platform: json["platform"],
-      appName: json["appName"],
-      appVersion: json["appVersion"],
-      maxProtocolVersion: json["maxProtocolVersion"],
-      features: json["features"] == null ? [] : List<dynamic>.from(json["features"]!.map((x) => x)),
-    );
-  }
-}
-
-class FeatureClass {
-  FeatureClass({
-    required this.name,
-    required this.maxMessages,
-  });
-
-  final String? name;
-  final int? maxMessages;
-
-  factory FeatureClass.fromJson(Map<String, dynamic> json) {
-    return FeatureClass(
-      name: json["name"],
-      maxMessages: json["maxMessages"],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
