@@ -1,37 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:telegram_web_app/telegram_web_app.dart';
 
-void main() {
+void main() async {
+  try {
+    if (TelegramWebApp.instance.isSupported) {
+      TelegramWebApp.instance.ready();
+      Future.delayed(const Duration(seconds: 1), TelegramWebApp.instance.expand);
+    }
+  } catch (e) {
+    print("Error happened in Flutter while loading Telegram $e");
+    // add delay for 'Telegram not loading sometimes' bug
+    await Future.delayed(const Duration(milliseconds: 200));
+    main();
+    return;
+  }
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.redAccent),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'Telegram Web App Example',
+      theme: TelegramThemeUtil.getTheme(TelegramWebApp.instance),
+      home: const MyHomePage(title: 'mini app'),
     );
   }
 }
@@ -105,6 +100,9 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+
+            Text(TelegramWebApp.instance.initData.toString()),
+
             const Text(
               'You have pushed the button this many times:',
             ),
