@@ -43,14 +43,14 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/
-    - assets/font/
+    - asset/
+    - asset/font/
   fonts:
     - family: Plus Jakarta Sans
       fonts:
-        - asset: assets/font/PlusJakartaSans-Bold.ttf
-        - asset: assets/font/PlusJakartaSans-Regular.ttf
-        - asset: assets/font/PlusJakartaSans-SemiBold.ttf
-        - asset: assets/font/PlusJakartaSans-Medium.ttf
-        - asset: assets/font/PlusJakartaSans-Light.ttf
-        - asset: assets/font/PlusJakartaSans-ExtraLight.ttf
+        - asset: asset/font/PlusJakartaSans-Bold.ttf
+        - asset: asset/font/PlusJakartaSans-Regular.ttf
+        - asset: asset/font/PlusJakartaSans-SemiBold.ttf
+        - asset: asset/font/PlusJakartaSans-Medium.ttf
+        - asset: asset/font/PlusJakartaSans-Light.ttf
+        - asset: asset/font/PlusJakartaSans-ExtraLight.ttf
